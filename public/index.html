@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head><title>Whispershard Chat</title></head>
+<body>
+  <h1>Whispershard Agent</h1>
+  <textarea id="log" rows="20" cols="80" readonly></textarea><br>
+  <input type="text" id="input" placeholder="Ask something..." autofocus />
+  <button onclick="send()">Send</button>
+  <script>
+    async function send() {
+      const input = document.getElementById('input').value;
+      document.getElementById('input').value = '';
+      const res = await fetch('/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: input })
+      });
+      const data = await res.json();
+      document.getElementById('log').value += '\\nYou: ' + input + '\\nAI: ' + data.reply;
+    }
+  </script>
+</body>
+</html>

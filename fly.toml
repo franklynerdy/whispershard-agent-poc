@@ -1,0 +1,10 @@
+app = "whispershard-agent-poc"
+
+[env]
+PORT = "3000"
+
+[build]
+builder = "Docker"
+
+[experimental]
+auto_rollback = true
