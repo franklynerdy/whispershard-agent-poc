@@ -2,8 +2,7 @@
   "name": "whispershard-agent-poc",
   "version": "1.0.0",
   "description": "AI-assisted D&D agent chat interface",
-  "type": "module",
-    "main": "index.js",
+  "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
