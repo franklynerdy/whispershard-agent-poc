@@ -7,9 +7,8 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "express":     "^4.18.2",
     "body-parser": "^1.20.2",
-    "node-fetch":  "^3.3.2"
+    "express": "^4.18.2"
   },
   "repository": {
     "type": "git",
@@ -21,10 +20,5 @@
   "bugs": {
     "url": "https://github.com/franklynerdy/whispershard-agent-poc/issues"
   },
-  "homepage": "https://github.com/franklynerdy/whispershard-agent-poc#readme",
-  "dependencies": {
-    "express": "^4.18.2",
-    "body-parser": "^1.20.2",
-    "node-fetch": "^3.3.2"
-  }
+  "homepage": "https://github.com/franklynerdy/whispershard-agent-poc#readme"
 }
