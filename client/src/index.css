@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom styles */
+
+.mode-banner {
+  background-color: #f0f4f8;
+  border-left: 4px solid #4c6ef5;
+  padding: 0.75rem;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  color: #3b4f74;
+}
+
 :root {
       --background: 0 0% 100%;
 --foreground: 20 14.3% 4.1%;
@@ -59,12 +70,28 @@
 
 /* Custom styles for WhisperShard Agent */
 .narration-card {
-  background-color: #e6f9e6;
-  border: 2px solid #4caf50;
+  background-color: #1a472a;
+  color: #ffffff;
+  border: 2px solid #2e7d32;
   border-radius: 8px;
-  padding: 1rem;
-  margin: 0.75rem 0;
+  padding: 1.25rem;
+  margin: 1rem 0;
   font-style: italic;
+  font-family: 'Georgia', serif;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.narration-card::before {
+  content: '"';
+  position: absolute;
+  top: -15px;
+  left: 10px;
+  font-size: 5rem;
+  opacity: 0.15;
+  color: #66bb6a;
+  font-family: Georgia, serif;
 }
 
 .mode-banner {

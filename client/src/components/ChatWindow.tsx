@@ -319,7 +319,7 @@ export default function ChatWindow({ setImageSearchTerm }: ChatWindowProps) {
                         </div>
                         <div className="flex-1">
                           <div className="text-sm font-medium text-gray-900">
-                            {message.role === "user" ? "You" : "WhisperShard AI"}
+                            {message.role === "user" ? "You" : "WhisperShard AI 🧙‍♂️"}
                           </div>
                           <div className="mt-1 text-sm text-gray-700 whitespace-pre-wrap">
                             {message.content.split("\n").map((line, i) => (

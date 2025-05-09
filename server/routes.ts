@@ -112,8 +112,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           const streamResponse = await openaiChat(messages, scriptContext, true, mode);
           
-          if (!streamResponse.on) {
-            // Handle non-stream response (should not happen with stream=true)
+          // We need to ensure we're working with a stream
+          if (!streamResponse || typeof streamResponse[Symbol.asyncIterator] !== 'function') {
             console.error("Expected stream response but got regular response");
             res.write(`data: ${JSON.stringify({ error: "Stream response expected but not received" })}\n\n`);
             res.end();
@@ -123,9 +123,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let buffer = "";
           let inNarrationBlock = false;
           let narrationContent = "";
-          
-          // Use event handlers since streamResponse is not an array
-          // Use the for await syntax for the stream instead of event handlers
           for await (const chunk of streamResponse) {
             const content = chunk.choices[0]?.delta?.content || '';
             if (content) {
@@ -182,7 +179,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         // Non-streaming response
         const completion = await openaiChat(messages, scriptContext, false, mode);
-        let response = completion.choices[0]?.message.content || "No response generated";
+        // Check if we have a ChatCompletion object (not a stream)
+        let response = "No response generated";
+        
+        // Properly handle the response format
+        if (completion && 'choices' in completion && completion.choices && completion.choices[0]?.message) {
+          response = completion.choices[0].message.content || "No response generated";
+        }
         
         // Check for narration tags in non-streaming response
         if (response.includes("[NARRATION]") && response.includes("[/NARRATION]")) {
