@@ -1,10 +1,11 @@
-import type { Express, Request, Response } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { MongoClient } from "mongodb";
 import { openaiChat } from "./services/openai";
 import { getMongoClient, getMongoDatabase } from "./services/mongodb";
 import { listObjects } from "./services/cloudflare";
+import { findAssetById, findImagesForAsset, searchAssets, searchRuleFragments, findScriptSuggestions } from "./services/assetService";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API Status endpoint
