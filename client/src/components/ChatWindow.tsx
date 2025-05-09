@@ -49,6 +49,47 @@ export default function ChatWindow({ setImageSearchTerm }: ChatWindowProps) {
     }
   }, [messages]);
   
+  // Detect image-worthy terms in messages and trigger image search
+  useEffect(() => {
+    if (messages.length === 0 || !setImageSearchTerm) return;
+    
+    // Get the latest message
+    const lastMessage = messages[messages.length - 1];
+    
+    // Only analyze assistant messages (not user inputs)
+    if (lastMessage.role !== "assistant") return;
+    
+    // D&D-specific terms that are likely to have corresponding images
+    const imageKeywords = [
+      "dragon", "sword", "wizard", "goblin", "map", "armor", "spell", 
+      "shield", "axe", "bow", "helm", "staff", "potion", "scroll",
+      "monster", "amulet", "ring", "orb", "wand", "cloak"
+    ];
+    
+    // Check if the message contains any of our keywords
+    for (const keyword of imageKeywords) {
+      // Use word boundaries to avoid matching substrings
+      const regex = new RegExp(`\\b${keyword}\\b`, 'i');
+      if (regex.test(lastMessage.content)) {
+        console.log(`Detected image keyword: ${keyword}`);
+        setImageSearchTerm(keyword);
+        return; // Only trigger one search at a time
+      }
+    }
+    
+    // Check for script narrations that might have visual elements
+    if (lastMessage.type === "script" && lastMessage.script) {
+      for (const keyword of imageKeywords) {
+        const regex = new RegExp(`\\b${keyword}\\b`, 'i');
+        if (regex.test(lastMessage.script)) {
+          console.log(`Detected image keyword in script: ${keyword}`);
+          setImageSearchTerm(keyword);
+          return;
+        }
+      }
+    }
+  }, [messages, setImageSearchTerm]);
+  
   // Check for script suggestions and image search terms
   useEffect(() => {
     const lastMessage = messages[messages.length - 1];
