@@ -1,26 +1,54 @@
 import fetch from 'node-fetch';
 
-// Cloudflare R2 API base URL
-const getR2Url = (accountId: string, bucketName: string) => 
-  `https://api.cloudflare.com/client/v4/accounts/${accountId}/r2/buckets/${bucketName}`;
+import { 
+  S3Client, 
+  ListBucketsCommand, 
+  ListObjectsV2Command, 
+  PutObjectCommand,
+  GetObjectCommand,
+  DeleteObjectCommand 
+} from "@aws-sdk/client-s3";
+import { Upload } from "@aws-sdk/lib-storage";
+import { Readable } from "stream";
 
-// Cloudflare API credentials
-const getCredentials = () => {
+// Define constants at the top of the file
+const DEFAULT_BUCKET = "whispershard-assets";
+
+// Initialize S3 client for Cloudflare R2
+let s3Client: S3Client | null = null;
+
+// S3 client configuration for Cloudflare R2
+function getS3Client() {
+  if (s3Client) return s3Client;
+
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
   const accessKey = process.env.CLOUDFLARE_R2_ACCESS_KEY;
   const secretKey = process.env.CLOUDFLARE_R2_SECRET_KEY;
-  const apiToken = process.env.CLOUDFLARE_API_TOKEN;
 
   if (!accountId) {
     throw new Error("CLOUDFLARE_ACCOUNT_ID environment variable is not set");
   }
 
-  if (!apiToken) {
-    throw new Error("CLOUDFLARE_API_TOKEN environment variable is not set");
+  if (!accessKey) {
+    throw new Error("CLOUDFLARE_R2_ACCESS_KEY environment variable is not set");
   }
 
-  return { accountId, accessKey, secretKey, apiToken };
-};
+  if (!secretKey) {
+    throw new Error("CLOUDFLARE_R2_SECRET_KEY environment variable is not set");
+  }
+
+  // Create and return a new S3 client
+  s3Client = new S3Client({
+    region: "auto", // R2 requires "auto" as the region
+    endpoint: `https://7942b93dd6963bf3f88f8d7acdd3d909.r2.cloudflarestorage.com`,
+    credentials: {
+      accessKeyId: accessKey,
+      secretAccessKey: secretKey,
+    },
+  });
+
+  return s3Client;
+}
 
 // Initialize Cloudflare R2 connection
 export async function initCloudflareR2() {
@@ -33,21 +61,26 @@ export async function initCloudflareR2() {
       return { connected: false, error: "CLOUDFLARE_ACCOUNT_ID environment variable is not set" };
     }
     
-    if (!process.env.CLOUDFLARE_API_TOKEN) {
-      console.warn("Warning: CLOUDFLARE_API_TOKEN is not set");
-      return { connected: false, error: "CLOUDFLARE_API_TOKEN environment variable is not set" };
+    if (!process.env.CLOUDFLARE_R2_ACCESS_KEY) {
+      console.warn("Warning: CLOUDFLARE_R2_ACCESS_KEY is not set");
+      return { connected: false, error: "CLOUDFLARE_R2_ACCESS_KEY environment variable is not set" };
     }
     
-    // Attempt to list buckets to verify connection
+    if (!process.env.CLOUDFLARE_R2_SECRET_KEY) {
+      console.warn("Warning: CLOUDFLARE_R2_SECRET_KEY is not set");
+      return { connected: false, error: "CLOUDFLARE_R2_SECRET_KEY environment variable is not set" };
+    }
+    
+    // Attempt to list objects in our known bucket to verify connection
     try {
-      const buckets = await listBuckets();
-      console.log(`Cloudflare R2 connection established. Found ${buckets.length} buckets.`);
+      const objects = await listObjects(DEFAULT_BUCKET);
+      console.log(`Cloudflare R2 connection established. Found ${objects.length} objects in bucket ${DEFAULT_BUCKET}.`);
       return { connected: true };
-    } catch (bucketError) {
-      console.error("Cloudflare R2 bucket listing error:", bucketError);
+    } catch (error) {
+      console.error("Cloudflare R2 connection error:", error);
       return { 
         connected: false, 
-        error: `API token may be invalid or missing permissions: ${(bucketError as Error).message}` 
+        error: `R2 credentials may be invalid or missing permissions: ${(error as Error).message}` 
       };
     }
   } catch (error) {
@@ -59,31 +92,11 @@ export async function initCloudflareR2() {
 // List all buckets
 export async function listBuckets() {
   try {
-    const { accountId, apiToken } = getCredentials();
+    const client = getS3Client();
+    const command = new ListBucketsCommand({});
+    const response = await client.send(command);
     
-    if (!apiToken) {
-      throw new Error("CLOUDFLARE_API_TOKEN is required but not set");
-    }
-    
-    // Use Cloudflare API authentication with Authorization token
-    const response = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${accountId}/r2/buckets`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiToken}`,
-        },
-      }
-    );
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to list buckets: ${response.status} ${errorText}`);
-    }
-    
-    const data = await response.json() as any;
-    return data.result || [];
+    return response.Buckets || [];
   } catch (error) {
     console.error("Error listing buckets:", error);
     throw error;
@@ -91,31 +104,27 @@ export async function listBuckets() {
 }
 
 // Upload an object to a bucket
-export async function uploadObject(bucketName: string, objectKey: string, fileBuffer: Buffer, contentType: string) {
+export async function uploadObject(bucketName: string = DEFAULT_BUCKET, objectKey: string, fileBuffer: Buffer, contentType: string) {
   try {
-    const { accountId, apiToken } = getCredentials();
+    const client = getS3Client();
     
-    const response = await fetch(
-      `${getR2Url(accountId, bucketName)}/objects/${objectKey}`,
-      {
-        method: 'PUT',
-        headers: {
-          'Content-Type': contentType,
-          'Authorization': `Bearer ${apiToken}`,
-        },
-        body: fileBuffer,
-      }
-    );
+    const upload = new Upload({
+      client,
+      params: {
+        Bucket: bucketName,
+        Key: objectKey,
+        Body: fileBuffer,
+        ContentType: contentType,
+      },
+    });
     
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to upload object: ${response.status} ${errorText}`);
-    }
+    const result = await upload.done();
     
     return {
       success: true,
       key: objectKey,
       bucket: bucketName,
+      etag: result.ETag,
     };
   } catch (error) {
     console.error("Error uploading object:", error);
@@ -124,29 +133,24 @@ export async function uploadObject(bucketName: string, objectKey: string, fileBu
 }
 
 // Get object from a bucket
-export async function getObject(bucketName: string, objectKey: string) {
+export async function getObject(bucketName: string = DEFAULT_BUCKET, objectKey: string) {
   try {
-    const { accountId, apiToken } = getCredentials();
+    const client = getS3Client();
     
-    const response = await fetch(
-      `${getR2Url(accountId, bucketName)}/objects/${objectKey}`,
-      {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${apiToken}`,
-        },
-      }
-    );
+    const command = new GetObjectCommand({
+      Bucket: bucketName,
+      Key: objectKey,
+    });
     
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to get object: ${response.status} ${errorText}`);
-    }
+    const response = await client.send(command);
+    
+    // Convert the readable stream to a buffer
+    const bodyContents = await streamToBuffer(response.Body as Readable);
     
     return {
       success: true,
-      data: await response.buffer(),
-      contentType: response.headers.get('content-type'),
+      data: bodyContents,
+      contentType: response.ContentType,
     };
   } catch (error) {
     console.error("Error getting object:", error);
@@ -154,25 +158,27 @@ export async function getObject(bucketName: string, objectKey: string) {
   }
 }
 
+// Helper function to convert a readable stream to a buffer
+async function streamToBuffer(stream: Readable): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    stream.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+    stream.on('end', () => resolve(Buffer.concat(chunks)));
+    stream.on('error', reject);
+  });
+}
+
 // Delete object from a bucket
-export async function deleteObject(bucketName: string, objectKey: string) {
+export async function deleteObject(bucketName: string = DEFAULT_BUCKET, objectKey: string) {
   try {
-    const { accountId, apiToken } = getCredentials();
+    const client = getS3Client();
     
-    const response = await fetch(
-      `${getR2Url(accountId, bucketName)}/objects/${objectKey}`,
-      {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${apiToken}`,
-        },
-      }
-    );
+    const command = new DeleteObjectCommand({
+      Bucket: bucketName,
+      Key: objectKey,
+    });
     
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to delete object: ${response.status} ${errorText}`);
-    }
+    await client.send(command);
     
     return { success: true };
   } catch (error) {
@@ -182,32 +188,18 @@ export async function deleteObject(bucketName: string, objectKey: string) {
 }
 
 // List objects in a bucket
-export async function listObjects(bucketName: string, prefix?: string) {
+export async function listObjects(bucketName: string = DEFAULT_BUCKET, prefix?: string) {
   try {
-    const { accountId, apiToken } = getCredentials();
+    const client = getS3Client();
     
-    let url = `${getR2Url(accountId, bucketName)}/objects`;
-    if (prefix) {
-      url += `?prefix=${encodeURIComponent(prefix)}`;
-    }
+    const command = new ListObjectsV2Command({
+      Bucket: bucketName,
+      Prefix: prefix,
+    });
     
-    const response = await fetch(
-      url,
-      {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${apiToken}`,
-        },
-      }
-    );
+    const response = await client.send(command);
     
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to list objects: ${response.status} ${errorText}`);
-    }
-    
-    const data = await response.json() as any;
-    return data.result || [];
+    return response.Contents || [];
   } catch (error) {
     console.error("Error listing objects:", error);
     throw error;
