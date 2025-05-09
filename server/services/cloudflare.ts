@@ -7,6 +7,8 @@ const getR2Url = (accountId: string, bucketName: string) =>
 // Cloudflare API credentials
 const getCredentials = () => {
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+  const accessKey = process.env.CLOUDFLARE_R2_ACCESS_KEY;
+  const secretKey = process.env.CLOUDFLARE_R2_SECRET_KEY;
   const apiToken = process.env.CLOUDFLARE_API_TOKEN;
   const email = process.env.CLOUDFLARE_EMAIL;
 
@@ -14,15 +16,15 @@ const getCredentials = () => {
     throw new Error("CLOUDFLARE_ACCOUNT_ID environment variable is not set");
   }
 
-  if (!apiToken) {
-    throw new Error("CLOUDFLARE_API_TOKEN environment variable is not set");
+  if (!accessKey) {
+    throw new Error("CLOUDFLARE_R2_ACCESS_KEY environment variable is not set");
   }
 
-  if (!email) {
-    throw new Error("CLOUDFLARE_EMAIL environment variable is not set");
+  if (!secretKey) {
+    throw new Error("CLOUDFLARE_R2_SECRET_KEY environment variable is not set");
   }
 
-  return { accountId, apiToken, email };
+  return { accountId, accessKey, secretKey, apiToken, email };
 };
 
 // Initialize Cloudflare R2 connection
@@ -36,14 +38,14 @@ export async function initCloudflareR2() {
       return { connected: false, error: "CLOUDFLARE_ACCOUNT_ID environment variable is not set" };
     }
     
-    if (!process.env.CLOUDFLARE_API_TOKEN) {
-      console.warn("Warning: CLOUDFLARE_API_TOKEN is not set");
-      return { connected: false, error: "CLOUDFLARE_API_TOKEN environment variable is not set" };
+    if (!process.env.CLOUDFLARE_R2_ACCESS_KEY) {
+      console.warn("Warning: CLOUDFLARE_R2_ACCESS_KEY is not set");
+      return { connected: false, error: "CLOUDFLARE_R2_ACCESS_KEY environment variable is not set" };
     }
     
-    if (!process.env.CLOUDFLARE_EMAIL) {
-      console.warn("Warning: CLOUDFLARE_EMAIL is not set");
-      return { connected: false, error: "CLOUDFLARE_EMAIL environment variable is not set" };
+    if (!process.env.CLOUDFLARE_R2_SECRET_KEY) {
+      console.warn("Warning: CLOUDFLARE_R2_SECRET_KEY is not set");
+      return { connected: false, error: "CLOUDFLARE_R2_SECRET_KEY environment variable is not set" };
     }
     
     // Attempt to list buckets to verify connection
@@ -67,23 +69,27 @@ export async function initCloudflareR2() {
 // List all buckets
 export async function listBuckets() {
   try {
-    const { accountId } = getCredentials();
-    const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+    const { accountId, accessKey, secretKey } = getCredentials();
     
-    if (!apiToken) {
-      throw new Error("CLOUDFLARE_API_TOKEN is required but not set");
+    if (!accessKey || !secretKey) {
+      throw new Error("CLOUDFLARE_R2_ACCESS_KEY and CLOUDFLARE_R2_SECRET_KEY are required but not set");
     }
     
-    // Try Cloudflare API authentication
+    // Create Authorization header from access key and secret key
+    const date = new Date().toUTCString();
+    const headers = {
+      'Content-Type': 'application/json',
+      'X-Amz-Date': date,
+      'X-Amz-Content-Sha256': 'UNSIGNED-PAYLOAD',
+      'Authorization': `AWS4-HMAC-SHA256 Credential=${accessKey}/20230321/auto/s3/aws4_request, SignedHeaders=host;x-amz-date, Signature=${secretKey}`,
+    };
+    
+    // Try Cloudflare R2 API authentication
     const response = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${accountId}/r2/buckets`,
       {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Auth-Email': email,
-          'X-Auth-Key': apiToken,
-        },
+        headers,
       }
     );
     
@@ -103,17 +109,22 @@ export async function listBuckets() {
 // Upload an object to a bucket
 export async function uploadObject(bucketName: string, objectKey: string, fileBuffer: Buffer, contentType: string) {
   try {
-    const { accountId, apiToken, email } = getCredentials();
+    const { accountId, accessKey, secretKey } = getCredentials();
+    
+    // Create Authorization header from access key and secret key
+    const date = new Date().toUTCString();
+    const headers = {
+      'Content-Type': contentType,
+      'X-Amz-Date': date,
+      'X-Amz-Content-Sha256': 'UNSIGNED-PAYLOAD',
+      'Authorization': `AWS4-HMAC-SHA256 Credential=${accessKey}/20230321/auto/s3/aws4_request, SignedHeaders=host;x-amz-date, Signature=${secretKey}`,
+    };
     
     const response = await fetch(
       `${getR2Url(accountId, bucketName)}/objects/${objectKey}`,
       {
         method: 'PUT',
-        headers: {
-          'Content-Type': contentType,
-          'X-Auth-Email': email,
-          'X-Auth-Key': apiToken,
-        },
+        headers,
         body: fileBuffer,
       }
     );
@@ -137,16 +148,21 @@ export async function uploadObject(bucketName: string, objectKey: string, fileBu
 // Get object from a bucket
 export async function getObject(bucketName: string, objectKey: string) {
   try {
-    const { accountId, apiToken, email } = getCredentials();
+    const { accountId, accessKey, secretKey } = getCredentials();
+    
+    // Create Authorization header from access key and secret key
+    const date = new Date().toUTCString();
+    const headers = {
+      'X-Amz-Date': date,
+      'X-Amz-Content-Sha256': 'UNSIGNED-PAYLOAD',
+      'Authorization': `AWS4-HMAC-SHA256 Credential=${accessKey}/20230321/auto/s3/aws4_request, SignedHeaders=host;x-amz-date, Signature=${secretKey}`,
+    };
     
     const response = await fetch(
       `${getR2Url(accountId, bucketName)}/objects/${objectKey}`,
       {
         method: 'GET',
-        headers: {
-          'X-Auth-Email': email,
-          'X-Auth-Key': apiToken,
-        },
+        headers,
       }
     );
     
@@ -176,8 +192,8 @@ export async function deleteObject(bucketName: string, objectKey: string) {
       {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${apiToken}`,
           'X-Auth-Email': email,
+          'X-Auth-Key': apiToken,
         },
       }
     );
@@ -209,8 +225,8 @@ export async function listObjects(bucketName: string, prefix?: string) {
       {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${apiToken}`,
           'X-Auth-Email': email,
+          'X-Auth-Key': apiToken,
         },
       }
     );
