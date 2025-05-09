@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import ChatWindow from "./ChatWindow";
 import RuleTab from "./RuleTab";
 import ScriptsPanel from "./ScriptsPanel";

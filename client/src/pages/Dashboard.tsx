@@ -3,10 +3,11 @@ import Sidebar from "@/components/Sidebar";
 import StatusCard from "@/components/StatusCard";
 import ApiEndpoints from "@/components/ApiEndpoints";
 import TerminalWindow from "@/components/TerminalWindow";
-import ChatTester from "@/components/ChatTester";
+import TabView from "@/components/TabView";
 
 export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showLegacyUI, setShowLegacyUI] = useState(false);
   
   return (
     <div className="flex h-screen bg-gray-100">
@@ -71,20 +72,36 @@ export default function Dashboard() {
         <main className="flex-1 relative overflow-y-auto focus:outline-none">
           <div className="py-6">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-              <h1 className="text-2xl font-semibold text-gray-900">WhisperShard Agent PoC Dashboard</h1>
+              <div className="flex justify-between items-center mb-6">
+                <h1 className="text-2xl font-semibold text-gray-900">WhisperShard Agent v0.6.0 🧙‍♂️</h1>
+                <button 
+                  onClick={() => setShowLegacyUI(!showLegacyUI)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none border border-gray-300 rounded-md shadow-sm"
+                >
+                  {showLegacyUI ? "Switch to New UI" : "Switch to Legacy UI"}
+                </button>
+              </div>
             </div>
+
             <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-              {/* Status Card */}
-              <StatusCard />
-              
-              {/* API Endpoints */}
-              <ApiEndpoints />
-              
-              {/* Terminal Window */}
-              <TerminalWindow />
-              
-              {/* Chat Tester */}
-              <ChatTester />
+              {showLegacyUI ? (
+                <>
+                  {/* Legacy UI Components */}
+                  <StatusCard />
+                  <ApiEndpoints />
+                  <TerminalWindow />
+                </>
+              ) : (
+                <>
+                  {/* Status Card - Always visible for context */}
+                  <StatusCard />
+                  
+                  {/* New Tabbed Interface */}
+                  <div className="mt-8">
+                    <TabView />
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </main>
