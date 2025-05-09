@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { MongoClient } from "mongodb";
 import { openaiChat } from "./services/openai";
 import { getMongoClient, getMongoDatabase } from "./services/mongodb";
+import { listObjects } from "./services/cloudflare";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API Status endpoint
@@ -314,28 +315,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const query = q.toString().toLowerCase();
-      const db = getMongoDatabase();
       
-      // This would normally query for images
-      // For now, return mock images
-      const mockImages = [
-        {
-          id: "img1",
-          assetId: query + "_1",
-          url: "https://images.unsplash.com/photo-1518391846015-55a9cc003b25?w=600&auto=format&fit=crop",
-          caption: query.charAt(0).toUpperCase() + query.slice(1) + " - View 1",
-          source: "WhisperShard Assets"
-        },
-        {
-          id: "img2",
-          assetId: query + "_2",
-          url: "https://images.unsplash.com/photo-1542718610-a1d656d1884c?w=600&auto=format&fit=crop",
-          caption: query.charAt(0).toUpperCase() + query.slice(1) + " - View 2",
-          source: "WhisperShard Assets"
+      // Search for images in Cloudflare R2 bucket based on searchTerm
+      const results = [];
+      
+      try {
+        console.log(`Searching R2 bucket for images matching: ${query}`);
+        
+        // Search in all 4 directories seen in the bucket
+        const directories = [
+          { path: 'dungeon-masters-guide/', name: "Dungeon Master's Guide" },
+          { path: 'monster-manual/', name: "Monster Manual" },
+          { path: 'phandelver-below/', name: "Phandelver Below" },
+          { path: 'phb/', name: "Player's Handbook" }
+        ];
+        
+        // Try each directory until we get enough results
+        for (const dir of directories) {
+          if (results.length >= 4) break; // Stop once we have enough images
+          
+          try {
+            const dirResults = await listObjects('whispershard-assets', dir.path);
+            const matches = dirResults.filter(obj => 
+              obj.Key && obj.Key.toLowerCase().includes(query)
+            ).slice(0, 4 - results.length); // Only take what we need
+            
+            // Add matches to results
+            matches.forEach((match, index) => {
+              results.push({
+                id: `${dir.path.replace('/', '')}_${index}`,
+                assetId: query,
+                url: `https://7942b93dd6963bf3f88f8d7acdd3d909.r2.cloudflarestorage.com/whispershard-assets/${match.Key}`,
+                caption: match.Key.split('/').pop()?.replace(/\.(webp|jpg|png|jpeg)$/, '') || query,
+                source: dir.name
+              });
+            });
+          } catch (dirError) {
+            console.error(`Error searching in ${dir.path}:`, dirError);
+          }
         }
-      ];
+        
+        console.log(`Found ${results.length} images matching: ${query}`);
+      } catch (error) {
+        console.error("Error searching R2 bucket:", error);
+      }
       
-      res.json({ images: mockImages });
+      // If we found no results, fall back to Unsplash as required in spec
+      if (results.length === 0) {
+        console.log("No R2 images found for query, falling back to Unsplash");
+        
+        // Fallback to Unsplash images
+        const unsplashImages = [
+          {
+            id: "img1",
+            assetId: query,
+            url: `https://source.unsplash.com/featured/?${encodeURIComponent(query)},fantasy&w=600`,
+            caption: query.charAt(0).toUpperCase() + query.slice(1) + " - Fantasy",
+            source: "Unsplash"
+          },
+          {
+            id: "img2",
+            assetId: query,
+            url: `https://source.unsplash.com/featured/?${encodeURIComponent(query)},medieval&w=600`,
+            caption: query.charAt(0).toUpperCase() + query.slice(1) + " - Medieval",
+            source: "Unsplash"
+          },
+          {
+            id: "img3",
+            assetId: query,
+            url: `https://source.unsplash.com/featured/?${encodeURIComponent(query)},rpg&w=600`,
+            caption: query.charAt(0).toUpperCase() + query.slice(1) + " - RPG",
+            source: "Unsplash"
+          },
+          {
+            id: "img4",
+            assetId: query,
+            url: `https://source.unsplash.com/featured/?${encodeURIComponent(query)},dungeon&w=600`,
+            caption: query.charAt(0).toUpperCase() + query.slice(1) + " - Dungeon",
+            source: "Unsplash"
+          }
+        ];
+        
+        return res.json({ images: unsplashImages });
+      }
+      
+      res.json({ images: results });
     } catch (error) {
       console.error("Image search error:", error);
       res.status(500).json({ error: (error as Error).message });
