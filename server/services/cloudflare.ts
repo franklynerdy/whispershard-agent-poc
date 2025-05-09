@@ -4,25 +4,25 @@ import fetch from 'node-fetch';
 const getR2Url = (accountId: string, bucketName: string) => 
   `https://api.cloudflare.com/client/v4/accounts/${accountId}/r2/buckets/${bucketName}`;
 
-// Cloudflare R2 API credentials
+// Cloudflare API credentials
 const getCredentials = () => {
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
-  const accessKey = process.env.CLOUDFLARE_R2_ACCESS_KEY;
-  const secretKey = process.env.CLOUDFLARE_R2_SECRET_KEY;
+  const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+  const email = process.env.CLOUDFLARE_EMAIL;
 
   if (!accountId) {
     throw new Error("CLOUDFLARE_ACCOUNT_ID environment variable is not set");
   }
 
-  if (!accessKey) {
-    throw new Error("CLOUDFLARE_R2_ACCESS_KEY environment variable is not set");
+  if (!apiToken) {
+    throw new Error("CLOUDFLARE_API_TOKEN environment variable is not set");
   }
 
-  if (!secretKey) {
-    throw new Error("CLOUDFLARE_R2_SECRET_KEY environment variable is not set");
+  if (!email) {
+    throw new Error("CLOUDFLARE_EMAIL environment variable is not set");
   }
 
-  return { accountId, accessKey, secretKey };
+  return { accountId, apiToken, email };
 };
 
 // Initialize Cloudflare R2 connection
@@ -36,18 +36,15 @@ export async function initCloudflareR2() {
       return { connected: false, error: "CLOUDFLARE_ACCOUNT_ID environment variable is not set" };
     }
     
-    if (!process.env.CLOUDFLARE_R2_ACCESS_KEY) {
-      console.warn("Warning: CLOUDFLARE_R2_ACCESS_KEY is not set");
-      return { connected: false, error: "CLOUDFLARE_R2_ACCESS_KEY environment variable is not set" };
+    if (!process.env.CLOUDFLARE_API_TOKEN) {
+      console.warn("Warning: CLOUDFLARE_API_TOKEN is not set");
+      return { connected: false, error: "CLOUDFLARE_API_TOKEN environment variable is not set" };
     }
     
-    if (!process.env.CLOUDFLARE_R2_SECRET_KEY) {
-      console.warn("Warning: CLOUDFLARE_R2_SECRET_KEY is not set");
-      return { connected: false, error: "CLOUDFLARE_R2_SECRET_KEY environment variable is not set" };
+    if (!process.env.CLOUDFLARE_EMAIL) {
+      console.warn("Warning: CLOUDFLARE_EMAIL is not set");
+      return { connected: false, error: "CLOUDFLARE_EMAIL environment variable is not set" };
     }
-    
-    // Validate credentials
-    const { accountId } = getCredentials();
     
     // Attempt to list buckets to verify connection
     try {
@@ -58,7 +55,7 @@ export async function initCloudflareR2() {
       console.error("Cloudflare R2 bucket listing error:", bucketError);
       return { 
         connected: false, 
-        error: `API key may be invalid or missing permissions: ${(bucketError as Error).message}` 
+        error: `API token may be invalid or missing permissions: ${(bucketError as Error).message}` 
       };
     }
   } catch (error) {
@@ -77,14 +74,15 @@ export async function listBuckets() {
       throw new Error("CLOUDFLARE_API_TOKEN is required but not set");
     }
     
-    // Use the Cloudflare API Token authentication
+    // Try Cloudflare API authentication
     const response = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${accountId}/r2/buckets`,
       {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiToken}`,
+          'X-Auth-Email': email,
+          'X-Auth-Key': apiToken,
         },
       }
     );
@@ -105,7 +103,7 @@ export async function listBuckets() {
 // Upload an object to a bucket
 export async function uploadObject(bucketName: string, objectKey: string, fileBuffer: Buffer, contentType: string) {
   try {
-    const { accountId, accessKey, secretKey } = getCredentials();
+    const { accountId, apiToken, email } = getCredentials();
     
     const response = await fetch(
       `${getR2Url(accountId, bucketName)}/objects/${objectKey}`,
@@ -113,8 +111,8 @@ export async function uploadObject(bucketName: string, objectKey: string, fileBu
         method: 'PUT',
         headers: {
           'Content-Type': contentType,
-          'Authorization': `Bearer ${secretKey}`,
-          'X-Auth-Email': process.env.CLOUDFLARE_EMAIL || 'api@example.com',
+          'X-Auth-Email': email,
+          'X-Auth-Key': apiToken,
         },
         body: fileBuffer,
       }
@@ -139,15 +137,15 @@ export async function uploadObject(bucketName: string, objectKey: string, fileBu
 // Get object from a bucket
 export async function getObject(bucketName: string, objectKey: string) {
   try {
-    const { accountId, accessKey, secretKey } = getCredentials();
+    const { accountId, apiToken, email } = getCredentials();
     
     const response = await fetch(
       `${getR2Url(accountId, bucketName)}/objects/${objectKey}`,
       {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${secretKey}`,
-          'X-Auth-Email': process.env.CLOUDFLARE_EMAIL || 'api@example.com',
+          'X-Auth-Email': email,
+          'X-Auth-Key': apiToken,
         },
       }
     );
@@ -171,15 +169,15 @@ export async function getObject(bucketName: string, objectKey: string) {
 // Delete object from a bucket
 export async function deleteObject(bucketName: string, objectKey: string) {
   try {
-    const { accountId, accessKey, secretKey } = getCredentials();
+    const { accountId, apiToken, email } = getCredentials();
     
     const response = await fetch(
       `${getR2Url(accountId, bucketName)}/objects/${objectKey}`,
       {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${secretKey}`,
-          'X-Auth-Email': process.env.CLOUDFLARE_EMAIL || 'api@example.com',
+          'Authorization': `Bearer ${apiToken}`,
+          'X-Auth-Email': email,
         },
       }
     );
@@ -199,7 +197,7 @@ export async function deleteObject(bucketName: string, objectKey: string) {
 // List objects in a bucket
 export async function listObjects(bucketName: string, prefix?: string) {
   try {
-    const { accountId, accessKey, secretKey } = getCredentials();
+    const { accountId, apiToken, email } = getCredentials();
     
     let url = `${getR2Url(accountId, bucketName)}/objects`;
     if (prefix) {
@@ -211,8 +209,8 @@ export async function listObjects(bucketName: string, prefix?: string) {
       {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${secretKey}`,
-          'X-Auth-Email': process.env.CLOUDFLARE_EMAIL || 'api@example.com',
+          'Authorization': `Bearer ${apiToken}`,
+          'X-Auth-Email': email,
         },
       }
     );
