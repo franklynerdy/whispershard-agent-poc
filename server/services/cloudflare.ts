@@ -10,21 +10,16 @@ const getCredentials = () => {
   const accessKey = process.env.CLOUDFLARE_R2_ACCESS_KEY;
   const secretKey = process.env.CLOUDFLARE_R2_SECRET_KEY;
   const apiToken = process.env.CLOUDFLARE_API_TOKEN;
-  const email = process.env.CLOUDFLARE_EMAIL;
 
   if (!accountId) {
     throw new Error("CLOUDFLARE_ACCOUNT_ID environment variable is not set");
   }
 
-  if (!accessKey) {
-    throw new Error("CLOUDFLARE_R2_ACCESS_KEY environment variable is not set");
+  if (!apiToken) {
+    throw new Error("CLOUDFLARE_API_TOKEN environment variable is not set");
   }
 
-  if (!secretKey) {
-    throw new Error("CLOUDFLARE_R2_SECRET_KEY environment variable is not set");
-  }
-
-  return { accountId, accessKey, secretKey, apiToken, email };
+  return { accountId, accessKey, secretKey, apiToken };
 };
 
 // Initialize Cloudflare R2 connection
@@ -41,11 +36,6 @@ export async function initCloudflareR2() {
     if (!process.env.CLOUDFLARE_API_TOKEN) {
       console.warn("Warning: CLOUDFLARE_API_TOKEN is not set");
       return { connected: false, error: "CLOUDFLARE_API_TOKEN environment variable is not set" };
-    }
-    
-    if (!process.env.CLOUDFLARE_EMAIL) {
-      console.warn("Warning: CLOUDFLARE_EMAIL is not set");
-      return { connected: false, error: "CLOUDFLARE_EMAIL environment variable is not set" };
     }
     
     // Attempt to list buckets to verify connection
@@ -167,15 +157,14 @@ export async function getObject(bucketName: string, objectKey: string) {
 // Delete object from a bucket
 export async function deleteObject(bucketName: string, objectKey: string) {
   try {
-    const { accountId, apiToken, email } = getCredentials();
+    const { accountId, apiToken } = getCredentials();
     
     const response = await fetch(
       `${getR2Url(accountId, bucketName)}/objects/${objectKey}`,
       {
         method: 'DELETE',
         headers: {
-          'X-Auth-Email': email || '',
-          'X-Auth-Key': apiToken || '',
+          'Authorization': `Bearer ${apiToken}`,
         },
       }
     );
@@ -195,7 +184,7 @@ export async function deleteObject(bucketName: string, objectKey: string) {
 // List objects in a bucket
 export async function listObjects(bucketName: string, prefix?: string) {
   try {
-    const { accountId, apiToken, email } = getCredentials();
+    const { accountId, apiToken } = getCredentials();
     
     let url = `${getR2Url(accountId, bucketName)}/objects`;
     if (prefix) {
@@ -207,8 +196,7 @@ export async function listObjects(bucketName: string, prefix?: string) {
       {
         method: 'GET',
         headers: {
-          'X-Auth-Email': email || '',
-          'X-Auth-Key': apiToken || '',
+          'Authorization': `Bearer ${apiToken}`,
         },
       }
     );
