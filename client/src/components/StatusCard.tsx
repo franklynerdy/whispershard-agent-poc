@@ -6,6 +6,8 @@ type StatusResponse = {
   status: string;
   mongodb: string;
   database: string;
+  pinecone: string;
+  cloudflare_r2: string;
   version: string;
 };
 
@@ -77,6 +79,38 @@ export default function StatusCard() {
                   <div className="mt-4">
                     <Badge variant="success">
                       API Key Configured
+                    </Badge>
+                  </div>
+                </div>
+              </Card>
+              
+              <Card className="bg-white overflow-hidden shadow rounded-lg">
+                <div className="px-4 py-5 sm:p-6">
+                  <dl>
+                    <dt className="text-sm font-medium text-gray-500 truncate">Pinecone Vector DB</dt>
+                    <dd className="mt-1 text-3xl font-semibold text-success">
+                      {data?.pinecone === "configured" ? "Configured" : "Not Configured"}
+                    </dd>
+                  </dl>
+                  <div className="mt-4">
+                    <Badge variant={data?.pinecone === "configured" ? "success" : "secondary"}>
+                      {data?.pinecone === "configured" ? "Ready for embeddings" : "API Key required"}
+                    </Badge>
+                  </div>
+                </div>
+              </Card>
+              
+              <Card className="bg-white overflow-hidden shadow rounded-lg">
+                <div className="px-4 py-5 sm:p-6">
+                  <dl>
+                    <dt className="text-sm font-medium text-gray-500 truncate">Cloudflare R2</dt>
+                    <dd className="mt-1 text-3xl font-semibold text-success">
+                      {data?.cloudflare_r2 === "configured" ? "Configured" : "Not Configured"}
+                    </dd>
+                  </dl>
+                  <div className="mt-4">
+                    <Badge variant={data?.cloudflare_r2 === "configured" ? "success" : "secondary"}>
+                      {data?.cloudflare_r2 === "configured" ? "Ready for storage" : "API Key required"}
                     </Badge>
                   </div>
                 </div>

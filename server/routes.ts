@@ -27,6 +27,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: "ok",
         mongodb: isConnected ? "connected" : "disconnected",
         database: process.env.DB_NAME || "whispershard",
+        pinecone: process.env.PINECONE_API_KEY ? "configured" : "not configured",
+        cloudflare_r2: process.env.CLOUDFLARE_R2_ACCESS_KEY ? "configured" : "not configured",
         version: "1.0.0"
       });
     } catch (error) {

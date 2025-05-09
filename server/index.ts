@@ -2,6 +2,8 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { initMongoDB } from "./services/mongodb";
+import { initPinecone } from "./services/pinecone";
+import { initCloudflareR2 } from "./services/cloudflare";
 import dotenv from "dotenv";
 
 // Load environment variables
@@ -47,6 +49,28 @@ app.use((req, res, next) => {
     console.log("Initializing MongoDB connection...");
     await initMongoDB();
     console.log("MongoDB connection established");
+    
+    // Initialize Pinecone vector database
+    try {
+      await initPinecone();
+      console.log("Pinecone initialized successfully");
+    } catch (error) {
+      console.error("Failed to initialize Pinecone:", error);
+      // Continue even if Pinecone fails - non-critical
+    }
+    
+    // Initialize Cloudflare R2
+    try {
+      const r2Status = await initCloudflareR2();
+      if (r2Status.connected) {
+        console.log("Cloudflare R2 initialized successfully");
+      } else {
+        console.warn("Cloudflare R2 initialization warning:", r2Status.error);
+      }
+    } catch (error) {
+      console.error("Failed to initialize Cloudflare R2:", error);
+      // Continue even if R2 fails - non-critical
+    }
   } catch (error) {
     console.error("Failed to initialize MongoDB:", error);
   }

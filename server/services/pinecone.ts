@@ -22,7 +22,6 @@ export async function initPinecone() {
     // Create Pinecone client instance
     pineconeClient = new Pinecone({
       apiKey,
-      environment,
     });
 
     console.log("Pinecone connection established");
