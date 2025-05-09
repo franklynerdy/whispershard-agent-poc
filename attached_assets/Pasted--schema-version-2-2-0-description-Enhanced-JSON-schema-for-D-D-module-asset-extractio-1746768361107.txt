@@ -1,0 +1,351 @@
+{
+  "schema_version": "2.2.0",
+  "description": "Enhanced JSON schema for D&D module asset extraction (v2.2): supports narrative pacing, conditional reveals, semantic tagging, geometry, portals, TTS controls, and back-compatibility with v2.1.",
+  "fields": {
+    "id": {
+      "data_type": "string",
+      "purpose": "Unique identifier for each asset, using lowercase_snake_case.",
+      "examples": [
+        "room_redbrand_corridor",
+        "npc_gundren_rockseeker"
+      ]
+    },
+    "name": {
+      "data_type": "string",
+      "purpose": "Display name of the asset for players and DM interface.",
+      "examples": [
+        "Redbrand Corridor",
+        "Gundren Rockseeker"
+      ]
+    },
+    "description": {
+      "data_type": "string",
+      "purpose": "Narrative and functional description for the asset."
+    },
+    "tags": {
+      "data_type": "array[string]",
+      "purpose": "Broad thematic identifiers for filtering and grouping assets."
+    },
+    "symbolic_tags": {
+      "data_type": "array[string]",
+      "purpose": "Deeper narrative or therapeutic symbols relating to the asset."
+    },
+    "dependencies": {
+      "data_type": "array[string]",
+      "purpose": "Conditions that must be met for this asset to become available or visible."
+    },
+    "anti_dependencies": {
+      "data_type": "array[string]",
+      "purpose": "Conditions that, if met, disable or suppress this asset."
+    },
+    "narrative_function": {
+      "data_type": "string",
+      "purpose": "Role within the narrative (e.g., informational, boss_encounter, reward_node)."
+    },
+    "narrative_stage": {
+      "data_type": "string",
+      "purpose": "Point in chapter/arc when the asset is critical (e.g., setup, climax)."
+    },
+    "emotional_tone": {
+      "data_type": "string",
+      "purpose": "Affect or mood associated with the asset."
+    },
+    "narrative_pressure": {
+      "data_type": "string",
+      "purpose": "Level of dramatic intensity (low, medium, high)."
+    },
+    "geometry": {
+      "data_type": "object",
+      "purpose": "Spatial or dimensional context (e.g., shape, dimensions)."
+    },
+    "access_portals": {
+      "data_type": "array[object]",
+      "purpose": "Defines doors/passages between assets, with reveal logic."
+    },
+    "sound_effects": {
+      "data_type": "object",
+      "purpose": "Ambient and triggered sound cues for immersion."
+    },
+    "media": {
+      "data_type": "object",
+      "purpose": "References to external media (images, video, audio) for this asset."
+    },
+    "dm_only_notes": {
+      "data_type": "string",
+      "purpose": "Internal DM notes and reminders, hidden from players."
+    },
+    "narrative_sequence": {
+      "data_type": "object",
+      "purpose": "Order or sequencing relative to other assets (e.g., comes_after, climactic)."
+    },
+    "reveal_logic": {
+      "data_type": "object",
+      "purpose": "Multi-stage conditional discoveries (awareness_levels, player_perception)."
+    },
+    "summary": {
+      "data_type": "string",
+      "purpose": "Short player-facing summary of the asset."
+    },
+    "npcs": {
+      "data_type": "array[object|string]",
+      "purpose": "NPCs tied to this asset, with names/roles or inline objects."
+    },
+    "items": {
+      "data_type": "array[object|string]",
+      "purpose": "Items tied to this asset, with names/types or inline objects."
+    },
+    "hooks": {
+      "data_type": "array[string|object]",
+      "purpose": "Adventure hooks or narrative prompts originating from this asset."
+    },
+    "locations": {
+      "data_type": "array[string|object]",
+      "purpose": "Relevant location names or definitions connected to this asset."
+    },
+    "challenge_rating": {
+      "data_type": "string",
+      "purpose": "Monster difficulty scaling",
+      "examples": [
+        "1",
+        "3",
+        "1/2"
+      ]
+    },
+    "hp": {
+      "data_type": "integer",
+      "purpose": "Monster hit points",
+      "examples": [
+        45,
+        120
+      ]
+    },
+    "ac": {
+      "data_type": "integer",
+      "purpose": "Monster armor class",
+      "examples": [
+        12,
+        18
+      ]
+    },
+    "size": {
+      "data_type": "string",
+      "purpose": "Creature physical size",
+      "examples": [
+        "Medium",
+        "Large"
+      ]
+    },
+    "alignment": {
+      "data_type": "string",
+      "purpose": "Creature moral and ethical alignment",
+      "examples": [
+        "Lawful Good",
+        "Chaotic Evil"
+      ]
+    },
+    "creature_type": {
+      "data_type": "string",
+      "purpose": "Creature classification",
+      "examples": [
+        "undead",
+        "beast",
+        "dragon"
+      ]
+    },
+    "abilities": {
+      "data_type": "object",
+      "purpose": "Monster ability scores",
+      "examples": [
+        {
+          "STR": 18,
+          "DEX": 12,
+          "CON": 16,
+          "INT": 10,
+          "WIS": 14,
+          "CHA": 8
+        }
+      ]
+    },
+    "character_id": {
+      "data_type": "string",
+      "purpose": "Unique ID for player character",
+      "examples": [
+        "bink"
+      ]
+    },
+    "player": {
+      "data_type": "string",
+      "purpose": "Name of the player controlling the character",
+      "examples": [
+        "Derrick"
+      ]
+    },
+    "class": {
+      "data_type": "string",
+      "purpose": "Player's class",
+      "examples": [
+        "Warlock"
+      ]
+    },
+    "level": {
+      "data_type": "integer",
+      "purpose": "Character level",
+      "examples": [
+        4
+      ]
+    },
+    "race": {
+      "data_type": "string",
+      "purpose": "Species or ancestry",
+      "examples": [
+        "Tiefling"
+      ]
+    },
+    "background": {
+      "data_type": "string",
+      "purpose": "Character's background",
+      "examples": [
+        "Entertainer"
+      ]
+    },
+    "faith": {
+      "data_type": "string",
+      "purpose": "Deity or philosophy",
+      "examples": [
+        "Whimsy and Flame"
+      ]
+    },
+    "stats": {
+      "data_type": "object",
+      "purpose": "Character abilities",
+      "examples": [
+        {
+          "str": 10,
+          "dex": 14,
+          "con": 15,
+          "int": 12,
+          "wis": 11,
+          "cha": 18
+        }
+      ]
+    },
+    "saving_throws": {
+      "data_type": "object",
+      "purpose": "Saving throw modifiers",
+      "examples": [
+        {
+          "str": 0,
+          "dex": 2
+        }
+      ]
+    },
+    "skills": {
+      "data_type": "object",
+      "purpose": "Character's skill modifiers",
+      "examples": [
+        {
+          "deception": 6,
+          "arcana": 3
+        }
+      ]
+    },
+    "passive_checks": {
+      "data_type": "object",
+      "purpose": "Passive values for perception, insight, investigation",
+      "examples": [
+        {
+          "perception": 11,
+          "insight": 13
+        }
+      ]
+    },
+    "traits": {
+      "data_type": "object",
+      "purpose": "Roleplay characteristics",
+      "examples": [
+        {
+          "personality": "Bold",
+          "ideals": "Fame",
+          "bonds": "Troupe",
+          "flaws": "Lies"
+        }
+      ]
+    },
+    "backstory": {
+      "data_type": "string",
+      "purpose": "Character backstory",
+      "examples": [
+        "Grew up in a troupe before a pact changed everything."
+      ]
+    },
+    "inventory": {
+      "data_type": "array[string]",
+      "purpose": "Character's non-equipped items",
+      "examples": [
+        "Flute",
+        "Torch"
+      ]
+    },
+    "equipment": {
+      "data_type": "array[string]",
+      "purpose": "Character's worn/carried gear",
+      "examples": [
+        "Crossbow",
+        "Leather Armor"
+      ]
+    },
+    "spells": {
+      "data_type": "object",
+      "purpose": "Cantrips and spell slots",
+      "examples": [
+        {
+          "cantrips": [
+            "Chill Touch"
+          ],
+          "level_1": {
+            "prepared": [
+              "Cure Wounds"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "inferred_logic": {
+    "doors_and_portals": "Access_portals drive map connectivity and conditional door reveals.",
+    "symbolic_pacing": "Combines narrative_sequence, emotional_tone, narrative_pressure for pacing cues."
+  },
+  "field_scope": {
+    "rooms": "Include geometry, access_portals, sound_effects, narrative_sequence, reveal_logic, media.",
+    "npcs": "Include roles, dependencies, narrative_function, dm_only_notes, media.",
+    "items": "Include description, usage_conditions, dependencies, media.",
+    "quests": "Include narrative_triggers, outcomes, cross-links to rooms/NPCs.",
+    "global_assets": "Sound_effects, media, narrative_notes shared across asset types."
+  },
+  "usage_guidelines": "For each chapter JSON: ingest all assets, apply this schema, then split into per-asset files for dynamic updates during play.",
+  "extensions": {
+    "tts_voice_fields": {
+      "npc_voice_id": {
+        "type": "string",
+        "description": "NPC TTS voice ID"
+      },
+      "narration_voice_id": {
+        "type": "string",
+        "description": "Scene narration voice ID"
+      },
+      "narration_mode": {
+        "type": "string",
+        "enum": [
+          "default",
+          "muted",
+          "auto"
+        ],
+        "description": "Controls if/how this asset is spoken aloud"
+      },
+      "sfx_tags": {
+        "type": "array[string]",
+        "description": "Tags for sound effects (e.g., door_creak, ambient_drip)"
+      }
+    }
+  }
+}

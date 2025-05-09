@@ -42,6 +42,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+  
+  // Route for testing the unified schema
+  app.get("/api/unified-schema-test", async (_req: Request, res: Response) => {
+    try {
+      // Import the unified schema
+      const { 
+        UnifiedAssetSchema, 
+        SpellSchema, 
+        AssetCategory,
+        FlexibleAssetSchema,
+        convertToUnifiedAsset
+      } = await import('./services/unifiedSchema');
+      
+      // Create a test spell asset using the polymorphic schema
+      const testSpell = SpellSchema.parse({
+        id: "magic_missile",
+        name: "Magic Missile",
+        assetCategory: AssetCategory.SPELL,
+        schemaVersion: "2.4",
+        level: 1,
+        school: "Evocation",
+        castingTime: "1 action",
+        range: "120 feet",
+        components: {
+          verbal: true,
+          somatic: true
+        },
+        duration: "Instantaneous",
+        description: "You create three glowing darts of magical force. Each dart hits a creature of your choice that you can see within range."
+      });
+      
+      // Create a flexible asset using the general schema
+      const flexibleAsset = FlexibleAssetSchema.parse({
+        id: "flexible_test_asset",
+        name: "Flexible Test Asset",
+        description: "This asset was created using the flexible schema",
+        tags: ["test", "flexible", "v2.4"],
+        narrative_function: "demonstration",
+        // Adding a non-standard field to demonstrate flexibility
+        custom_field: "This field isn't part of any standard schema"
+      });
+      
+      // Convert flexible asset to unified format
+      const convertedAsset = convertToUnifiedAsset(flexibleAsset);
+      
+      res.json({
+        message: "Unified schema test successful",
+        testSpell,
+        flexibleAsset,
+        convertedAsset
+      });
+    } catch (error) {
+      console.error('Error testing unified schema:', error);
+      res.status(500).json({ 
+        status: "error", 
+        message: "Error testing unified schema",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
 
   // Chat endpoint
   app.post("/chat", async (req: Request, res: Response) => {
@@ -230,11 +290,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const query = q.toString().toLowerCase();
-      const db = getMongoDatabase();
       
-      // This would normally query a rules collection
-      // For now, return a mock response
-      const mockRule = {
+      // Try to find rule fragments from MongoDB using the schema
+      const ruleFragments = await searchRuleFragments(query);
+      
+      if (ruleFragments && ruleFragments.length > 0) {
+        // Use the first rule fragment as the main explanation
+        const mainRule = ruleFragments[0];
+        
+        // Extract bullet points from additional rule fragments
+        const bulletPoints = ruleFragments.slice(1).map(rule => {
+          if (typeof rule.text === 'string') {
+            return rule.text.substring(0, 100) + (rule.text.length > 100 ? '...' : '');
+          }
+          return rule.description?.toString().substring(0, 100) || 'Related rule';
+        });
+        
+        // Add default bullet points if we don't have enough
+        if (bulletPoints.length < 2) {
+          bulletPoints.push("Consult your GM for specific interpretations");
+          bulletPoints.push("Remember the Rule of Cool: if it's awesome, it might be allowed");
+        }
+        
+        // Format the response
+        const ruleResponse = {
+          question: query,
+          explanation: mainRule.text?.toString() || mainRule.description?.toString() || `Rules about ${query}`,
+          sourceName: mainRule.sourceBook?.toString() || mainRule.source?.toString(),
+          sourceText: mainRule.section?.toString() || 'Core Rules',
+          bulletPoints
+        };
+        
+        return res.json(ruleResponse);
+      }
+      
+      // If no rule fragments found, create a generic response
+      const defaultRule = {
         question: query,
         explanation: `Rules for ${query} are determined by the game master and the rulebook.`,
         bulletPoints: [
@@ -244,7 +335,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ]
       };
       
-      res.json(mockRule);
+      res.json(defaultRule);
     } catch (error) {
       console.error("Rule lookup error:", error);
       res.status(500).json({ error: (error as Error).message });
@@ -317,7 +408,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const query = q.toString().toLowerCase();
       
-      // Search for images in Cloudflare R2 bucket based on searchTerm
+      // First try to find images in MongoDB using the schema
+      try {
+        console.log(`Searching for asset images with ID: ${query}`);
+        const dbImages = await findImagesForAsset(query);
+        
+        if (dbImages && dbImages.length > 0) {
+          console.log(`Found ${dbImages.length} images in database for asset: ${query}`);
+          return res.json({ images: dbImages });
+        }
+      } catch (dbError) {
+        console.error("Error searching database for images:", dbError);
+      }
+      
+      // If no database images, search for images in Cloudflare R2 bucket
       const results = [];
       
       try {
@@ -363,7 +467,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // If we found no results, fall back to Unsplash as required in spec
       if (results.length === 0) {
-        console.log("No R2 images found for query, falling back to Unsplash");
+        console.log("No images found for query, falling back to Unsplash");
         
         // Fallback to Unsplash images
         const unsplashImages = [
@@ -403,6 +507,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ images: results });
     } catch (error) {
       console.error("Image search error:", error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+  
+  // Asset image endpoint - Get images for a specific asset ID
+  app.get("/api/asset/:id/images", async (req: Request, res: Response) => {
+    try {
+      const assetId = req.params.id;
+      
+      if (!assetId) {
+        return res.status(400).json({ error: "Asset ID is required" });
+      }
+      
+      // Get images from MongoDB schema
+      const images = await findImagesForAsset(assetId);
+      
+      // If we have no results from the database, try to find from R2 storage
+      if (images.length === 0) {
+        // Same fallback as in search-images endpoint
+        console.log(`No images found in MongoDB for asset ID: ${assetId}, trying R2 storage`);
+        
+        // Try to find in R2 storage using the ID as search term
+        const results = [];
+        
+        try {
+          // Search in all 4 directories seen in the bucket
+          const directories = [
+            { path: 'dungeon-masters-guide/', name: "Dungeon Master's Guide" },
+            { path: 'monster-manual/', name: "Monster Manual" },
+            { path: 'phandelver-below/', name: "Phandelver Below" },
+            { path: 'phb/', name: "Player's Handbook" }
+          ];
+          
+          // Try each directory until we get enough results
+          for (const dir of directories) {
+            if (results.length >= 4) break; // Stop once we have enough images
+            
+            try {
+              const dirResults = await listObjects('whispershard-assets', dir.path);
+              const matches = dirResults.filter(obj => 
+                obj.Key && obj.Key.toLowerCase().includes(assetId.toLowerCase())
+              ).slice(0, 4 - results.length); // Only take what we need
+              
+              // Add matches to results
+              matches.forEach((match, index) => {
+                results.push({
+                  id: `${dir.path.replace('/', '')}_${index}`,
+                  assetId: assetId,
+                  url: `https://7942b93dd6963bf3f88f8d7acdd3d909.r2.cloudflarestorage.com/whispershard-assets/${match.Key}`,
+                  caption: match.Key.split('/').pop()?.replace(/\.(webp|jpg|png|jpeg)$/, '') || assetId,
+                  source: dir.name
+                });
+              });
+            } catch (dirError) {
+              console.error(`Error searching in ${dir.path}:`, dirError);
+            }
+          }
+          
+          if (results.length > 0) {
+            console.log(`Found ${results.length} images in R2 storage for asset ID: ${assetId}`);
+            return res.json({ images: results });
+          }
+        } catch (storageError) {
+          console.error("Error searching R2 storage:", storageError);
+        }
+        
+        // If still no results, fall back to Unsplash
+        console.log(`No images found in R2 storage for asset ID: ${assetId}, falling back to Unsplash`);
+        const unsplashImages = [
+          {
+            id: "img1",
+            assetId: assetId,
+            url: `https://source.unsplash.com/featured/?${encodeURIComponent(assetId)},fantasy&w=600`,
+            caption: assetId.charAt(0).toUpperCase() + assetId.slice(1) + " - Fantasy",
+            source: "Unsplash"
+          },
+          {
+            id: "img2",
+            assetId: assetId,
+            url: `https://source.unsplash.com/featured/?${encodeURIComponent(assetId)},medieval&w=600`,
+            caption: assetId.charAt(0).toUpperCase() + assetId.slice(1) + " - Medieval",
+            source: "Unsplash"
+          }
+        ];
+        
+        return res.json({ images: unsplashImages });
+      }
+      
+      // Return MongoDB images if found
+      res.json({ images });
+    } catch (error) {
+      console.error("Asset images error:", error);
       res.status(500).json({ error: (error as Error).message });
     }
   });
