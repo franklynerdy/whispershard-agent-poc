@@ -30,14 +30,37 @@ export async function initCloudflareR2() {
   try {
     console.log("Initializing Cloudflare R2 connection...");
     
+    // Check if required env variables are set
+    if (!process.env.CLOUDFLARE_ACCOUNT_ID) {
+      console.warn("Warning: CLOUDFLARE_ACCOUNT_ID is not set");
+      return { connected: false, error: "CLOUDFLARE_ACCOUNT_ID environment variable is not set" };
+    }
+    
+    if (!process.env.CLOUDFLARE_R2_ACCESS_KEY) {
+      console.warn("Warning: CLOUDFLARE_R2_ACCESS_KEY is not set");
+      return { connected: false, error: "CLOUDFLARE_R2_ACCESS_KEY environment variable is not set" };
+    }
+    
+    if (!process.env.CLOUDFLARE_R2_SECRET_KEY) {
+      console.warn("Warning: CLOUDFLARE_R2_SECRET_KEY is not set");
+      return { connected: false, error: "CLOUDFLARE_R2_SECRET_KEY environment variable is not set" };
+    }
+    
     // Validate credentials
     const { accountId } = getCredentials();
     
-    // Basic connection test - list buckets
-    const buckets = await listBuckets();
-    
-    console.log(`Cloudflare R2 connection established. Found ${buckets.length} buckets.`);
-    return { connected: true };
+    // Attempt to list buckets to verify connection
+    try {
+      const buckets = await listBuckets();
+      console.log(`Cloudflare R2 connection established. Found ${buckets.length} buckets.`);
+      return { connected: true };
+    } catch (bucketError) {
+      console.error("Cloudflare R2 bucket listing error:", bucketError);
+      return { 
+        connected: false, 
+        error: `API key may be invalid or missing permissions: ${(bucketError as Error).message}` 
+      };
+    }
   } catch (error) {
     console.error("Cloudflare R2 initialization error:", error);
     return { connected: false, error: (error as Error).message };
@@ -47,16 +70,21 @@ export async function initCloudflareR2() {
 // List all buckets
 export async function listBuckets() {
   try {
-    const { accountId, accessKey, secretKey } = getCredentials();
+    const { accountId } = getCredentials();
+    const apiToken = process.env.CLOUDFLARE_API_TOKEN;
     
+    if (!apiToken) {
+      throw new Error("CLOUDFLARE_API_TOKEN is required but not set");
+    }
+    
+    // Use the Cloudflare API Token authentication
     const response = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${accountId}/r2/buckets`,
       {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'X-Auth-Key': secretKey,
-          'X-Auth-Email': accessKey,
+          'Authorization': `Bearer ${apiToken}`,
         },
       }
     );
@@ -85,8 +113,8 @@ export async function uploadObject(bucketName: string, objectKey: string, fileBu
         method: 'PUT',
         headers: {
           'Content-Type': contentType,
-          'X-Auth-Key': secretKey,
-          'X-Auth-Email': accessKey,
+          'Authorization': `Bearer ${secretKey}`,
+          'X-Auth-Email': process.env.CLOUDFLARE_EMAIL || 'api@example.com',
         },
         body: fileBuffer,
       }
@@ -118,8 +146,8 @@ export async function getObject(bucketName: string, objectKey: string) {
       {
         method: 'GET',
         headers: {
-          'X-Auth-Key': secretKey,
-          'X-Auth-Email': accessKey,
+          'Authorization': `Bearer ${secretKey}`,
+          'X-Auth-Email': process.env.CLOUDFLARE_EMAIL || 'api@example.com',
         },
       }
     );
@@ -150,8 +178,8 @@ export async function deleteObject(bucketName: string, objectKey: string) {
       {
         method: 'DELETE',
         headers: {
-          'X-Auth-Key': secretKey,
-          'X-Auth-Email': accessKey,
+          'Authorization': `Bearer ${secretKey}`,
+          'X-Auth-Email': process.env.CLOUDFLARE_EMAIL || 'api@example.com',
         },
       }
     );
@@ -183,8 +211,8 @@ export async function listObjects(bucketName: string, prefix?: string) {
       {
         method: 'GET',
         headers: {
-          'X-Auth-Key': secretKey,
-          'X-Auth-Email': accessKey,
+          'Authorization': `Bearer ${secretKey}`,
+          'X-Auth-Email': process.env.CLOUDFLARE_EMAIL || 'api@example.com',
         },
       }
     );
