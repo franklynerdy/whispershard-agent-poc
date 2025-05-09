@@ -3,6 +3,11 @@ run = "npm run start"
 
 [nix]
 channel = "stable-24_05"
+packages = ["fly"]
 
 [deployment]
 run = ["sh", "-c", "npm run start"]
+
+[[ports]]
+localPort = 3000
+externalPort = 80
