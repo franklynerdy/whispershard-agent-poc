@@ -6,6 +6,12 @@ import { openaiChat } from "./services/openai";
 import { getMongoClient, getMongoDatabase } from "./services/mongodb";
 import { listObjects } from "./services/cloudflare";
 import { findAssetById, findImagesForAsset, searchAssets, searchRuleFragments, findScriptSuggestions } from "./services/assetService";
+import { 
+  findAssetById as findUnifiedAsset,
+  searchUnifiedAssets,
+  findRuleFragments as findUnifiedRuleFragments,
+  saveUnifiedAsset
+} from "./services/unifiedAssetService";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API Status endpoint
@@ -599,6 +605,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ images });
     } catch (error) {
       console.error("Asset images error:", error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+  
+  // Unified Asset API Endpoints
+  
+  // Get a unified asset by ID
+  app.get("/api/unified/asset/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      
+      if (!id) {
+        return res.status(400).json({ error: "Asset ID is required" });
+      }
+      
+      const asset = await findUnifiedAsset(id);
+      
+      if (!asset) {
+        return res.status(404).json({ error: "Asset not found" });
+      }
+      
+      res.json({ asset });
+    } catch (error) {
+      console.error('Error finding unified asset:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+  
+  // Search for unified assets
+  app.get("/api/unified/assets/search", async (req: Request, res: Response) => {
+    try {
+      const { q, category, limit } = req.query;
+      
+      if (!q) {
+        return res.status(400).json({ error: "Query parameter 'q' is required" });
+      }
+      
+      const query = q.toString();
+      let assetCategory = undefined;
+      let maxLimit = 10;
+      
+      // Convert category string to enum if provided
+      if (category) {
+        const { AssetCategory } = await import('./services/unifiedSchema');
+        if (Object.values(AssetCategory).includes(category as any)) {
+          assetCategory = category as any;
+        }
+      }
+      
+      // Parse limit
+      if (limit && !isNaN(parseInt(limit.toString()))) {
+        maxLimit = Math.min(parseInt(limit.toString()), 50); // Cap at 50
+      }
+      
+      const assets = await searchUnifiedAssets(query, assetCategory, maxLimit);
+      
+      res.json({ 
+        assets,
+        query,
+        category: assetCategory || 'all',
+        count: assets.length,
+        limit: maxLimit
+      });
+    } catch (error) {
+      console.error('Error searching unified assets:', error);
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+  
+  // Save/update a unified asset
+  app.post("/api/unified/asset", async (req: Request, res: Response) => {
+    try {
+      const assetData = req.body;
+      
+      if (!assetData || !assetData.id || !assetData.name) {
+        return res.status(400).json({ 
+          error: "Invalid asset data. Required fields: id, name"
+        });
+      }
+      
+      // Parse the asset through our schema to validate it
+      const { FlexibleAssetSchema } = await import('./services/unifiedSchema');
+      const validatedAsset = FlexibleAssetSchema.parse(assetData);
+      
+      // Save to database
+      const savedAsset = await saveUnifiedAsset(validatedAsset);
+      
+      res.json({ 
+        message: "Asset saved successfully",
+        asset: savedAsset
+      });
+    } catch (error) {
+      console.error('Error saving unified asset:', error);
+      
+      // Handle validation errors
+      if (error instanceof Error && error.name === 'ZodError') {
+        return res.status(400).json({ 
+          error: "Invalid asset data format",
+          details: error.message
+        });
+      }
+      
       res.status(500).json({ error: (error as Error).message });
     }
   });
