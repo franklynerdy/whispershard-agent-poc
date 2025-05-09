@@ -1,0 +1,88 @@
+WhisperShardAgent,
+
+You have a working Node.js/Express + React PoC with:
+- Streaming GPT-4o chat (`/chat` via SSE)
+- `/api/status` health endpoint
+- MongoDB lookups against `v6_*` collections for scenes
+
+For v0.6.0, **adapt this existing app** by adding:
+
+1. Green Narration Cards  
+   - When SSE messages include `{ type: "script", scene, script }`, render `script` inside  
+     ```html
+     <div class="narration-card">…text…</div>
+     ```  
+   - CSS (global):
+     ```css
+     .narration-card {
+       background-color: #e6f9e6;
+       border: 2px solid #4caf50;
+       border-radius: 8px;
+       padding: 1rem;
+       margin: 0.75rem 0;
+       font-style: italic;
+     }
+     ```
+   - Auto-scroll into view on new cards.
+
+2. Free‐form Chat + Mode Banner  
+   - Above chat, show a banner “Scene found: [Name] – [Summary]” whenever a scene intent is detected.  
+   - Two chat modes: “Narrate Scene” (default) and “Interpret Rules” (toggle).
+
+3. Rule Interpreter Tab  
+   - Add a “Rules” tab.  
+   - Input box: type a rule question.  
+   - Backend route `/api/rule`:  
+     • Query `v6_*_ruleFragment` collections for keywords.  
+     • Return matching text + feed into GPT prompt: “Explain rule: …”  
+   - Show bullet‐point breakdown in tab.
+
+4. Script Suggestions Panel  
+   - Collapsible sidebar under chat.  
+   - If user chats “combat” or “roleplay,” call `/api/script-suggestions`:
+     • For combat: return 3 short scene scripts (hooks, ambience, NPC lines).  
+     • For roleplay: query `v6_*_npc` and propose 3 character prompts.  
+   - Render suggestions as clickable items to paste into chat.
+
+5. Image Carousel Tab  
+   - “Images” tab with 4‐card carousel.  
+   - On mention of monsters/locations/items in chat, call `/api/search-images?q=[assetId]`:
+     • `/api/asset/:id/images` returns `asset.images[]` from MongoDB (schema‐driven).  
+     • Fallback: query Unsplash.  
+   - Render image cards; tap to enlarge lightbox.
+
+6. Schema‐Indexed Images  
+   - Extend `Schema_Polymorphic.json` base to include:
+     ```json
+     "images": {
+       "type":"array",
+       "items": {
+         "type":"object",
+         "required":["assetId","url"],
+         "properties": {
+           "assetId":{"type":"string"},
+           "url":{"type":"string","format":"uri"},
+           "caption":{"type":"string"},
+           "source":{"type":"string"}
+         }
+       }
+     }
+     ```
+   - Populate `v6_images` collection with `{ assetId, url, caption, source, importedAt }`.  
+   - Create index on `{ assetId:1 }`.  
+   - Express route `/api/asset/:id/images`.
+
+7. Tech Stack & UX  
+   - React + Tailwind (or shadcn/ui) only.  
+   - Layout: Tabs: Chat | Rules | Scripts | Images.  
+   - Loading spinners and error messages for each panel.  
+   - Responsive: tabs stack vertically on narrow screens.
+
+8. Stub & Scaffold  
+   - Create React components: `ChatWindow`, `RuleTab`, `ScriptsPanel`, `ImageCarousel`, etc.  
+   - Wire up Express routes: `/api/rule`, `/api/script-suggestions`, `/api/asset/:id/images`.  
+   - Stub each backend to return realistic mock JSON so UI layouts can be tested immediately.
+
+**Goal:** by morning I can open each tab, see mock data, and integrate real logic tomorrow.  
+
+Approve & start.

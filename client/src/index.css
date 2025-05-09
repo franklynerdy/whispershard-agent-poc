@@ -56,3 +56,64 @@
     @apply font-sans antialiased bg-background text-foreground;
   }
 }
+
+/* Custom styles for WhisperShard Agent */
+.narration-card {
+  background-color: #e6f9e6;
+  border: 2px solid #4caf50;
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 0.75rem 0;
+  font-style: italic;
+}
+
+.mode-banner {
+  background-color: #f0f8ff;
+  border-left: 4px solid #4169e1;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  font-weight: 500;
+  border-radius: 4px;
+}
+
+.script-suggestion {
+  border-left: 3px solid #9c27b0;
+  padding: 0.5rem 0.75rem;
+  margin: 0.5rem 0;
+  background-color: #f9f0fc;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.script-suggestion:hover {
+  background-color: #f0e1f4;
+  transform: translateX(2px);
+}
+
+.image-card {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+}
+
+.image-card:hover {
+  transform: scale(1.03);
+}
+
+/* Tab styles */
+.tab-active {
+  border-bottom: 2px solid #4169e1;
+  color: #4169e1;
+  font-weight: 500;
+}
+
+/* Loading animations */
+.loading-spinner {
+  animation: spin 1.2s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
