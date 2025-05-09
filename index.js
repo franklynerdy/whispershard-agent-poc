@@ -29,7 +29,11 @@ app.post('/chat', async (req, res) => {
         },
         body: JSON.stringify({
           model:    'gpt-4',
-          messages: [{ role: 'user', content: message }]
+          messages: [
+            { role: 'system', content: 'You are Whispershard, an                   intelligent narrative agent connected to structured data.' },
+            { role: 'user', content: message }
+          ]
+
         })
       }
     );
