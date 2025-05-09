@@ -144,3 +144,42 @@
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+/* Mobile-friendly styles */
+.mobile-touch-target {
+  min-height: 44px; /* Minimum touch target size for mobile */
+}
+
+/* Apply safe area insets for notched mobile devices */
+@supports (padding: max(0px)) {
+  .mobile-safe-area-inset {
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+}
+
+/* For preventing text from being too small on mobile */
+@media (max-width: 640px) {
+  .narration-card {
+    font-size: 0.9rem;
+    padding: 1rem;
+  }
+  
+  .script-suggestion {
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+  }
+}
+
+/* For improved readability on small screens */
+@media (max-width: 480px) {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  
+  input, textarea, select, button {
+    font-size: 16px !important; /* Prevents iOS Safari from zooming when focusing on inputs */
+  }
+}

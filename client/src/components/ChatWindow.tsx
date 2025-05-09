@@ -284,25 +284,25 @@ export default function ChatWindow({ setImageSearchTerm }: ChatWindowProps) {
   
   return (
     <div className="flex flex-col h-full bg-white shadow rounded-lg">
-      <div className="px-4 py-5 sm:p-6">
+      <div className="px-3 py-4 sm:px-4 sm:py-5">
         {/* Chat Header with Mode Toggle */}
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg leading-6 font-medium text-gray-900">
+        <div className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-2 xs:gap-0">
+          <h2 className="text-base sm:text-lg leading-6 font-medium text-gray-900">
             WhisperShard Chat
             <Badge 
               variant={chatMode === "narrate" ? "default" : "secondary"} 
               className="ml-2"
             >
-              {chatMode === "narrate" ? "Narrate Scene" : "Interpret Rules"}
+              {chatMode === "narrate" ? "Narrate" : "Rules"}
             </Badge>
           </h2>
           <div className="flex items-center space-x-2">
-            <span className="text-sm text-gray-500">Narrate</span>
+            <span className="text-xs sm:text-sm text-gray-500">Narrate</span>
             <Switch 
               checked={chatMode === "interpret"} 
               onCheckedChange={toggleChatMode} 
             />
-            <span className="text-sm text-gray-500">Interpret</span>
+            <span className="text-xs sm:text-sm text-gray-500">Interpret</span>
           </div>
         </div>
         
@@ -314,12 +314,12 @@ export default function ChatWindow({ setImageSearchTerm }: ChatWindowProps) {
         )}
         
         <div className="mt-5">
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+          <div className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200">
             {/* Chat Messages */}
-            <div className="space-y-4 max-h-96 overflow-y-auto">
+            <div className="space-y-3 sm:space-y-4 max-h-[60vh] md:max-h-[70vh] overflow-y-auto">
               {messages.length === 0 ? (
-                <div className="text-center py-10 text-gray-500">
-                  <p>No messages yet. Start a conversation! Try asking about a scene or rule.</p>
+                <div className="text-center py-6 sm:py-10 text-gray-500">
+                  <p className="text-sm sm:text-base">No messages yet. Start a conversation! Try asking about a scene or rule.</p>
                 </div>
               ) : (
                 messages.map((message, index) => {
@@ -328,7 +328,7 @@ export default function ChatWindow({ setImageSearchTerm }: ChatWindowProps) {
                     return (
                       <div 
                         key={index} 
-                        className="narration-card"
+                        className="narration-card text-sm"
                         ref={index === messages.length - 1 ? narrationCardRef : null}
                       >
                         {message.script || message.content}
@@ -344,34 +344,34 @@ export default function ChatWindow({ setImageSearchTerm }: ChatWindowProps) {
                         message.role === "user" 
                           ? "bg-white rounded-lg border border-gray-200" 
                           : "bg-indigo-50 rounded-lg border border-indigo-100"
-                      } p-3 shadow-sm`}
+                      } p-2 sm:p-3 shadow-sm`}
                     >
-                      <div className="flex items-start space-x-3">
+                      <div className="flex items-start space-x-2 sm:space-x-3">
                         <div className="flex-shrink-0">
                           {message.role === "user" ? (
-                            <svg className="h-8 w-8 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className="h-6 w-6 sm:h-8 sm:w-8 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                             </svg>
                           ) : (
-                            <svg className="h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className="h-6 w-6 sm:h-8 sm:w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
                             </svg>
                           )}
                         </div>
-                        <div className="flex-1">
-                          <div className="text-sm font-medium text-gray-900">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs sm:text-sm font-medium text-gray-900">
                             {message.role === "user" ? "You" : "WhisperShard AI 🧙‍♂️"}
                           </div>
-                          <div className="mt-1 text-sm text-gray-700 whitespace-pre-wrap">
+                          <div className="mt-1 text-xs sm:text-sm text-gray-700 whitespace-pre-wrap break-words">
                             {message.content.split("\n").map((line, i) => (
-                              <p key={i} className={i > 0 ? "mt-2" : ""}>
+                              <p key={i} className={i > 0 ? "mt-1 sm:mt-2" : ""}>
                                 {line}
                               </p>
                             ))}
                             
                             {message.role === "assistant" && 
                               message.content.includes("Reference:") && (
-                              <div className="mt-2 p-2 bg-gray-100 rounded text-xs font-mono">
+                              <div className="mt-2 p-1 sm:p-2 bg-gray-100 rounded text-xs font-mono">
                                 {message.content
                                   .split("\n")
                                   .filter(line => line.includes("Reference:") || line.includes("Timestamp:"))
@@ -391,9 +391,9 @@ export default function ChatWindow({ setImageSearchTerm }: ChatWindowProps) {
             
             {/* Script Suggestions */}
             {showSuggestions && scriptSuggestions.length > 0 && (
-              <div className="mt-4 border-t pt-4">
+              <div className="mt-3 sm:mt-4 border-t pt-3 sm:pt-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-medium text-gray-900">Script Suggestions</h3>
+                  <h3 className="text-xs sm:text-sm font-medium text-gray-900">Script Suggestions</h3>
                   <button
                     type="button"
                     onClick={() => setShowSuggestions(false)}
@@ -406,7 +406,7 @@ export default function ChatWindow({ setImageSearchTerm }: ChatWindowProps) {
                   {scriptSuggestions.map((suggestion, index) => (
                     <div 
                       key={index}
-                      className="script-suggestion"
+                      className="script-suggestion text-xs sm:text-sm p-2 sm:p-3"
                       onClick={() => handleSuggestionClick(suggestion)}
                     >
                       {suggestion}
@@ -417,41 +417,41 @@ export default function ChatWindow({ setImageSearchTerm }: ChatWindowProps) {
             )}
             
             {/* Chat Input */}
-            <div className="mt-4">
+            <div className="mt-3 sm:mt-4">
               <form className="relative" onSubmit={handleSubmit}>
                 <div className="border border-gray-300 rounded-lg shadow-sm overflow-hidden focus-within:border-primary focus-within:ring-1 focus-within:ring-primary">
                   <Textarea 
-                    rows={3} 
+                    rows={2}
                     name="message" 
                     id="message" 
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
-                    className="block w-full py-3 px-4 border-0 resize-none focus:ring-0 sm:text-sm" 
-                    placeholder={`Type your message... (${chatMode === "narrate" ? "describe a scene or ask for a narration" : "ask about game rules"})`}
+                    className="block w-full py-2 sm:py-3 px-3 sm:px-4 border-0 resize-none focus:ring-0 text-xs sm:text-sm" 
+                    placeholder={`Type your message... (${chatMode === "narrate" ? "scene description" : "rule question"})`}
                     disabled={isLoading}
                   />
-                  <div className="py-2 px-3 bg-gray-50 flex items-center justify-between">
-                    <div className="flex items-center space-x-1">
+                  <div className="py-1 sm:py-2 px-2 sm:px-3 bg-gray-50 flex items-center justify-between">
+                    <div className="flex items-center">
                       <button 
                         type="button" 
                         className="inline-flex items-center justify-center rounded text-gray-500 hover:text-gray-700"
                         onClick={() => setShowSuggestions(!showSuggestions)}
                       >
-                        <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg className="h-4 w-4 sm:h-5 sm:w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                         </svg>
-                        <span className="text-sm ml-1">Suggestions</span>
+                        <span className="text-xs sm:text-sm ml-1 hidden xs:inline">Suggestions</span>
                       </button>
                     </div>
                     <div className="flex-shrink-0">
                       <Button 
                         type="submit"
                         disabled={isLoading || !inputValue.trim()} 
-                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                        className="inline-flex items-center px-3 sm:px-4 py-1.5 sm:py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
                       >
                         {isLoading ? (
                           <>
-                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <svg className="animate-spin -ml-1 mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
@@ -459,7 +459,7 @@ export default function ChatWindow({ setImageSearchTerm }: ChatWindowProps) {
                           </>
                         ) : (
                           <>
-                            <svg className="h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className="h-3 w-3 sm:h-4 sm:w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                             </svg>
                             Send
